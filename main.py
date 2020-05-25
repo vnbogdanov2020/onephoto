@@ -13,19 +13,6 @@ KeyWin1.row('Мои события')
 KeyWin2 = telebot.types.ReplyKeyboardMarkup(resize_keyboard=1)
 KeyWin2.row('Добавить ')
 
-keyboard2 = telebot.types.ReplyKeyboardMarkup(resize_keyboard=1)
-key1 = types.KeyboardButton(text='Город')
-key2 = types.KeyboardButton(text='Координаты',request_location=True)
-keyboard2.add(key1,key2)
-key3 = types.KeyboardButton(text='Назад')
-keyboard2.add(key3)
-
-
-KeyNewUser = telebot.types.ReplyKeyboardMarkup(resize_keyboard=1)
-key_b = types.KeyboardButton(text='Зарегистрироваться',request_contact=True)
-KeyNewUser.add(key_b)
-
-
 cursor = cnx.cursor()
 
 bot = telebot.TeleBot(bot_token)
@@ -43,7 +30,7 @@ def start_message(message):
         cnx.close()
 
     bot.send_message(message.chat.id,
-                     'Привет! Я помогу составить из ваших фото видео-историю, которой можно поделиться с друзьями.',
+                     'Привет! Я помогу зафиксировать историю, которая проходит каждый день. Для этого вы можете указать событие и каждый день делать одно фото. Затем можно составить из ваших фото видео-историю, которой можно поделиться с друзьями.',
                      reply_markup=KeyWin1)
 
 #Обработка текстовых сообщений
@@ -56,7 +43,7 @@ def send_text(message):
         events = cursor.fetchall()
 
         for row in events:
-            switch_button = types.InlineKeyboardButton(text=row['events_name'], callback_data=row['events_id'])
+            switch_button = types.InlineKeyboardButton(text=row[1], callback_data=row[0])
             markup.add(switch_button)
 
         switch_button = types.InlineKeyboardButton(text='Добавить...', callback_data='NewEvent')
@@ -69,13 +56,16 @@ def inline(callback):
     print(callback)
     if callback.data=='NewEvent':
         send = bot.send_message(callback.message.chat.id, 'Укажите название события')
-        bot.register_next_step_handler(send, NewName)
+        bot.register_next_step_handler(send, NewEvent)
         #log(callback.message)
 
 
-def NewName(message):
+def NewEvent(message):
     bot.send_message(message.chat.id, 'Создано новое событие {NewName}'.format(NewName=message.text))
-    cursor.executemany("INSERT INTO events (chat_id, events_name) VALUES (%s,%s)", [(message.chat.id, {NewName})])
+    newdata = [
+        (message.chat.id,message.text),
+    ]
+    cursor.executemany("INSERT INTO events (chat_id, events_name) VALUES (%s,%s)", newdata)
     cnx.commit()
     cursor.close()
     cnx.close()
